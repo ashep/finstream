@@ -54,7 +54,7 @@ func (d *DDB) SetCurrencyRate(ctx context.Context, rate banking.CurrencyRate) (b
 		return false, fmt.Errorf("get existing rate: %w", err)
 	}
 
-	if exRate != nil && rate.Date.Equal(exRate.Date) && rate.Rate.Equal(exRate.Rate) {
+	if exRate != nil && rate.Date.Equal(exRate.Date) {
 		return false, nil // no changes
 	}
 

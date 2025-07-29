@@ -1,2 +1,3 @@
-# monobank-streamer
-Streams your Monobank data to Kafka
+# finstream
+
+Stream your financial data.
