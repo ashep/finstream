@@ -102,11 +102,11 @@ func unmarshalCurrencyRate(cr map[string]types.AttributeValue) (*banking.Currenc
 
 	base, err := banking.NewCurrencyByCode(item.BaseCode)
 	if err != nil {
-		return nil, fmt.Errorf("new base currency by num %d: %w", item.BaseCode, err)
+		return nil, fmt.Errorf("new base currency by num %s: %w", item.BaseCode, err)
 	}
 	target, err := banking.NewCurrencyByCode(item.TargetCode)
 	if err != nil {
-		return nil, fmt.Errorf("new target currency by num %d: %w", item.TargetCode, err)
+		return nil, fmt.Errorf("new target currency by num %s: %w", item.TargetCode, err)
 	}
 
 	return &banking.CurrencyRate{
@@ -120,7 +120,7 @@ func unmarshalCurrencyRate(cr map[string]types.AttributeValue) (*banking.Currenc
 
 func getCurrencyRateKey(provider, baseCode, targetCode string) currencyRateKey {
 	return currencyRateKey{
-		PK: fmt.Sprintf("CR"),
+		PK: "CR",
 		SK: fmt.Sprintf("P/%s/B/%s/T/%s", provider, baseCode, targetCode),
 	}
 }
