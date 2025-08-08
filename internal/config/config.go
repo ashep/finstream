@@ -8,8 +8,12 @@ import (
 
 type StorageDriver string
 
+type StreamingDriver string
+
 const (
 	StorageDDB StorageDriver = "ddb"
+
+	StreamingKafka StreamingDriver = "kafka"
 )
 
 type Monobank struct {
@@ -23,29 +27,48 @@ type Currency struct {
 }
 
 type Storage struct {
-	Driver StorageDriver    `yaml:"driver" envconfig:"APP_STORAGE_DRIVER"`
-	DDB    StorageDriverDDB `yaml:"ddb" envconfig:"APP_STORAGE_DDB"`
+	Driver StorageDriver `yaml:"driver" envconfig:"APP_STORAGE_DRIVER"`
+	DDB    StorageDriverOptionsDDB
 }
 
-type StorageDriverDDB struct {
+type StorageDriverOptionsDDB struct {
 	Region          string `yaml:"region" envconfig:"APP_STORAGE_DDB_REGION"`
 	TableName       string `yaml:"table_name" envconfig:"APP_STORAGE_DDB_TABLE_NAME"`
 	AccessKeyID     string `yaml:"access_key_id" envconfig:"APP_STORAGE_DDB_ACCESS_KEY_ID"`
 	AccessKeySecret string `yaml:"access_key_secret" envconfig:"APP_STORAGE_DDB_ACCESS_KEY_SECRET"`
 }
 
+type StreamingDriverOptionsKafkaTopics struct {
+	Currency string `yaml:"currency" envconfig:"APP_STREAMING_KAFKA_TOPIC_CURRENCY"`
+}
+
+type StreamingOptionsKafka struct {
+	Enabled          bool                              `yaml:"enabled" envconfig:"APP_STREAMING_KAFKA_ENABLED"`
+	BootstrapServers []string                          `yaml:"bootstrap_servers" envconfig:"APP_STREAMING_KAFKA_BOOTSTRAP_SERVERS"`
+	Topics           StreamingDriverOptionsKafkaTopics `yaml:"topics" envconfig:"APP_STREAMING_KAFKA_TOPICS"`
+}
+
+type Streaming struct {
+	Kafka StreamingOptionsKafka `yaml:"kafka" envconfig:"APP_STREAMING_KAFKA"`
+}
+
 type Config struct {
-	Monobank Monobank `yaml:"monobank"`
-	Currency Currency `yaml:"currency"`
-	Storage  Storage  `yaml:"storage"`
+	Storage   Storage   `yaml:"storage"`
+	Streaming Streaming `yaml:"streaming"`
+	Currency  Currency  `yaml:"currency"`
+	Monobank  Monobank  `yaml:"monobank"`
 }
 
 func (c *Config) Validate() error {
-	if err := c.validateMonobank(); err != nil {
+	if err := c.validateStorage(); err != nil {
 		return err
 	}
 
-	if err := c.validateStorage(); err != nil {
+	if err := c.ValidateStreaming(); err != nil {
+		return err
+	}
+
+	if err := c.validateMonobank(); err != nil {
 		return err
 	}
 
@@ -65,18 +88,6 @@ func (c *Config) Validate() error {
 		if _, err := banking.NewCurrencyByCode(code); err != nil {
 			return fmt.Errorf("invalid currency code %s: %w", code, err)
 		}
-	}
-
-	return nil
-}
-
-func (c *Config) validateMonobank() error {
-	if !c.Monobank.Enabled {
-		return nil
-	}
-
-	if c.Monobank.APIKey == "" {
-		return fmt.Errorf("monobank.api_key is required when monobank is enabled")
 	}
 
 	return nil
@@ -103,6 +114,31 @@ func (c *Config) validateStorage() error {
 		}
 	default:
 		return fmt.Errorf("unsupported storage driver: %s", c.Storage.Driver)
+	}
+
+	return nil
+}
+
+func (c *Config) ValidateStreaming() error {
+	if c.Streaming.Kafka.Enabled {
+		if len(c.Streaming.Kafka.BootstrapServers) == 0 {
+			c.Streaming.Kafka.BootstrapServers = []string{"localhost:9092"}
+		}
+		if c.Streaming.Kafka.Topics.Currency == "" {
+			c.Streaming.Kafka.Topics.Currency = "currency"
+		}
+	}
+
+	return nil
+}
+
+func (c *Config) validateMonobank() error {
+	if !c.Monobank.Enabled {
+		return nil
+	}
+
+	if c.Monobank.APIKey == "" {
+		return fmt.Errorf("monobank.api_key is required when monobank is enabled")
 	}
 
 	return nil

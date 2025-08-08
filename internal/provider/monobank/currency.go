@@ -46,10 +46,11 @@ func (m *Monobank) GetCurrencyRates(ctx context.Context) ([]banking.CurrencyRate
 		}
 
 		rates = append(rates, banking.CurrencyRate{
-			Base:   base,
-			Target: target,
-			Rate:   val.Round(int32(target.Digits)),
-			Date:   time.Unix(rate.Date, 0),
+			Provider: "monobank",
+			Base:     base,
+			Target:   target,
+			Rate:     val.Round(int32(target.Digits)),
+			Date:     time.Unix(rate.Date, 0),
 		})
 	}
 

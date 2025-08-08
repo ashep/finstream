@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ashep/finstream/internal/config"
+	"github.com/ashep/finstream/internal/sink/kafka"
 	"github.com/ashep/finstream/internal/storage/ddb"
 	"github.com/ashep/go-banking"
 	"github.com/rs/zerolog"
@@ -17,15 +18,24 @@ type provider interface {
 }
 
 type storage interface {
-	GetCurrencyRate(ctx context.Context, baseNum, targetNum int) (*banking.CurrencyRate, error)
+	GetCurrencyRate(ctx context.Context, provider, baseCode, targetCode string) (*banking.CurrencyRate, error)
 	SetCurrencyRate(ctx context.Context, rate banking.CurrencyRate) (bool, error)
 }
 
+type sinkWriter interface {
+	Write(ctx context.Context, key string, val any) error
+}
+
+type sink struct {
+	Currency sinkWriter
+}
+
 type Streamer struct {
-	cfg *config.Config
-	pr  map[string]provider
-	st  storage
-	l   zerolog.Logger
+	cfg       *config.Config
+	storage   storage
+	providers map[string]provider
+	sinks     map[string]sink
+	l         zerolog.Logger
 }
 
 func New(cfg *config.Config, l zerolog.Logger) (*Streamer, error) {
@@ -40,26 +50,34 @@ func New(cfg *config.Config, l zerolog.Logger) (*Streamer, error) {
 		)
 	}
 
+	sinks := make(map[string]sink)
+	if cfg.Streaming.Kafka.Enabled {
+		sinks["kafka"] = sink{
+			Currency: kafka.New(cfg.Streaming.Kafka.BootstrapServers, cfg.Streaming.Kafka.Topics.Currency, l),
+		}
+	}
+
 	return &Streamer{
-		cfg: cfg,
-		pr:  make(map[string]provider),
-		st:  st,
-		l:   l,
+		cfg:       cfg,
+		providers: make(map[string]provider),
+		storage:   st,
+		sinks:     sinks,
+		l:         l,
 	}, nil
 }
 
 func (s *Streamer) RegisterProvider(name string, p provider) error {
-	if _, exists := s.pr[name]; exists {
+	if _, exists := s.providers[name]; exists {
 		return fmt.Errorf("provider already registered: %s", name)
 	}
 
-	s.pr[name] = p
+	s.providers[name] = p
 
 	return nil
 }
 
 func (s *Streamer) Run(ctx context.Context) error {
-	if len(s.pr) == 0 {
+	if len(s.providers) == 0 {
 		return errors.New("no providers registered")
 	}
 

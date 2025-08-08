@@ -4,12 +4,13 @@ go 1.24
 
 require (
 	github.com/ashep/go-app v0.0.0-20250727064041-43fe1e6f7b60
-	github.com/ashep/go-banking v0.0.0-20250719094609-0389c30d0188
+	github.com/ashep/go-banking v0.0.0-20250729194609-2a787091ef3e
 	github.com/ashep/go-monobank-client v0.0.0-20250719094145-b3d6956c6216
 	github.com/aws/aws-sdk-go-v2 v1.37.0
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.20.0
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.45.0
 	github.com/rs/zerolog v1.34.0
+	github.com/segmentio/kafka-go v0.4.48
 	github.com/shopspring/decimal v1.4.0
 )
 
@@ -23,9 +24,11 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
+	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/prometheus/client_golang v1.22.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.65.0 // indirect

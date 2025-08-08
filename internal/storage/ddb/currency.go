@@ -20,16 +20,17 @@ type currencyRateKey struct {
 }
 
 type currencyRate struct {
-	PK        string    `dynamodbav:"PK"`
-	SK        string    `dynamodbav:"SK"`
-	BaseNum   int       `dynamodbav:"B"`
-	TargetNum int       `dynamodbav:"T"`
-	Date      time.Time `dynamodbav:"D"`
-	Rate      float64   `dynamodbav:"R"`
+	PK         string    `dynamodbav:"PK"`
+	SK         string    `dynamodbav:"SK"`
+	Provider   string    `dynamodbav:"P"`
+	BaseCode   string    `dynamodbav:"B"`
+	TargetCode string    `dynamodbav:"T"`
+	Date       time.Time `dynamodbav:"D"`
+	Rate       float64   `dynamodbav:"R"`
 }
 
-func (d *DDB) GetCurrencyRate(ctx context.Context, baseNum, targetNum int) (*banking.CurrencyRate, error) {
-	k := getCurrencyRateKey(baseNum, targetNum)
+func (d *DDB) GetCurrencyRate(ctx context.Context, provider, baseCode, targetCode string) (*banking.CurrencyRate, error) {
+	k := getCurrencyRateKey(provider, baseCode, targetCode)
 	getItemRes, err := d.cli.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: d.tableName,
 		Key: map[string]types.AttributeValue{
@@ -45,11 +46,11 @@ func (d *DDB) GetCurrencyRate(ctx context.Context, baseNum, targetNum int) (*ban
 		return nil, apperr.ErrCurrencyRateNotFound
 	}
 
-	return toBankingCurrencyRate(getItemRes.Item)
+	return unmarshalCurrencyRate(getItemRes.Item)
 }
 
 func (d *DDB) SetCurrencyRate(ctx context.Context, rate banking.CurrencyRate) (bool, error) {
-	exRate, err := d.GetCurrencyRate(ctx, rate.Base.Num, rate.Target.Num)
+	exRate, err := d.GetCurrencyRate(ctx, rate.Provider, rate.Base.Code, rate.Target.Code)
 	if err != nil && !errors.Is(err, apperr.ErrCurrencyRateNotFound) {
 		return false, fmt.Errorf("get existing rate: %w", err)
 	}
@@ -58,7 +59,7 @@ func (d *DDB) SetCurrencyRate(ctx context.Context, rate banking.CurrencyRate) (b
 		return false, nil // no changes
 	}
 
-	item, err := fromBankingCurrencyRate(rate)
+	item, err := marshalCurrencyRate(rate)
 	if err != nil {
 		return false, err
 	}
@@ -74,16 +75,17 @@ func (d *DDB) SetCurrencyRate(ctx context.Context, rate banking.CurrencyRate) (b
 	return true, nil
 }
 
-func fromBankingCurrencyRate(rate banking.CurrencyRate) (map[string]types.AttributeValue, error) {
-	k := getCurrencyRateKey(rate.Base.Num, rate.Target.Num)
+func marshalCurrencyRate(rate banking.CurrencyRate) (map[string]types.AttributeValue, error) {
+	k := getCurrencyRateKey(rate.Provider, rate.Base.Code, rate.Target.Code)
 
 	item, err := attributevalue.MarshalMap(currencyRate{
-		PK:        k.PK,
-		SK:        k.SK,
-		BaseNum:   rate.Base.Num,
-		TargetNum: rate.Target.Num,
-		Date:      rate.Date,
-		Rate:      rate.Rate.InexactFloat64(),
+		PK:         k.PK,
+		SK:         k.SK,
+		Provider:   rate.Provider,
+		BaseCode:   rate.Base.Code,
+		TargetCode: rate.Target.Code,
+		Date:       rate.Date,
+		Rate:       rate.Rate.InexactFloat64(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("marshal: %w", err)
@@ -92,32 +94,33 @@ func fromBankingCurrencyRate(rate banking.CurrencyRate) (map[string]types.Attrib
 	return item, nil
 }
 
-func toBankingCurrencyRate(cr map[string]types.AttributeValue) (*banking.CurrencyRate, error) {
+func unmarshalCurrencyRate(cr map[string]types.AttributeValue) (*banking.CurrencyRate, error) {
 	item := &currencyRate{}
 	if err := attributevalue.UnmarshalMap(cr, &item); err != nil {
 		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 
-	base, err := banking.NewCurrencyByNum(item.BaseNum)
+	base, err := banking.NewCurrencyByCode(item.BaseCode)
 	if err != nil {
-		return nil, fmt.Errorf("new base currency by num %d: %w", item.BaseNum, err)
+		return nil, fmt.Errorf("new base currency by num %d: %w", item.BaseCode, err)
 	}
-	target, err := banking.NewCurrencyByNum(item.TargetNum)
+	target, err := banking.NewCurrencyByCode(item.TargetCode)
 	if err != nil {
-		return nil, fmt.Errorf("new target currency by num %d: %w", item.TargetNum, err)
+		return nil, fmt.Errorf("new target currency by num %d: %w", item.TargetCode, err)
 	}
 
 	return &banking.CurrencyRate{
-		Base:   base,
-		Target: target,
-		Date:   item.Date,
-		Rate:   decimal.NewFromFloat(item.Rate),
+		Provider: item.Provider,
+		Base:     base,
+		Target:   target,
+		Date:     item.Date,
+		Rate:     decimal.NewFromFloat(item.Rate),
 	}, nil
 }
 
-func getCurrencyRateKey(baseNum, targetNum int) currencyRateKey {
+func getCurrencyRateKey(provider, baseCode, targetCode string) currencyRateKey {
 	return currencyRateKey{
-		PK: fmt.Sprintf("BCR/%d", baseNum),
-		SK: fmt.Sprintf("TCR/%d", targetNum),
+		PK: fmt.Sprintf("CR"),
+		SK: fmt.Sprintf("P/%s/B/%s/T/%s", provider, baseCode, targetCode),
 	}
 }

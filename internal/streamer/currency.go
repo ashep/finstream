@@ -9,58 +9,74 @@ import (
 
 	"github.com/ashep/finstream/internal/apperr"
 	"github.com/ashep/go-banking"
+	"github.com/shopspring/decimal"
 )
 
-type currencyRateChangeEvent struct {
-	Before banking.CurrencyRate `json:"before"`
-	After  banking.CurrencyRate `json:"after"`
-}
-
 func (s *Streamer) fetchCurrencyRates(ctx context.Context) error {
-	for prvName, prv := range s.pr {
+	for prvName, prv := range s.providers {
 		rates, err := prv.GetCurrencyRates(ctx)
 		if err != nil {
 			return fmt.Errorf("%s: get currency rates: %w", prvName, err)
 		}
 
-		for _, rate := range rates {
-			if !slices.Contains(s.cfg.Currency.List, rate.Base.Code) {
+		for _, rateNew := range rates {
+			if !slices.Contains(s.cfg.Currency.List, rateNew.Base.Code) {
 				continue
 			}
-			if !slices.Contains(s.cfg.Currency.List, rate.Target.Code) {
+			if !slices.Contains(s.cfg.Currency.List, rateNew.Target.Code) {
 				continue
 			}
 
-			exRate, err := s.st.GetCurrencyRate(ctx, rate.Base.Num, rate.Target.Num)
+			rateBefore, err := s.storage.GetCurrencyRate(ctx, rateNew.Provider, rateNew.Base.Code, rateNew.Target.Code)
 			if err != nil && !errors.Is(err, apperr.ErrCurrencyRateNotFound) {
 				return fmt.Errorf("%s: get existing rate: %w", prvName, err)
 			}
 
-			updated, err := s.st.SetCurrencyRate(ctx, rate)
+			updated, err := s.storage.SetCurrencyRate(ctx, rateNew)
 			if err != nil {
 				return fmt.Errorf("%s: store rate: %w", prvName, err)
 			}
 
-			if updated {
-				ll := s.l.Info().
-					Str("provider", prvName).
-					Str("base", rate.Base.Code).
-					Str("target", rate.Target.Code).
-					Str("rate", rate.Rate.String()).
-					Str("date", rate.Date.Format(time.DateTime))
-				if exRate != nil {
-					ll = ll.Str("ex_rate", exRate.Rate.String()).Str("ex_date", exRate.Date.Format(time.DateTime))
-				}
-				ll.Msg("currency rate updated")
-			} else {
-				s.l.Info().
-					Str("provider", prvName).
-					Str("base", rate.Base.Code).
-					Str("target", rate.Target.Code).
-					Str("rate", rate.Rate.String()).
-					Str("date", rate.Date.Format(time.DateTime)).
-					Msg("currency rate isn't changed")
+			if !updated {
+				return nil
 			}
+
+			for snkName, snk := range s.sinks {
+				if snk.Currency == nil {
+					continue
+				}
+
+				k := fmt.Sprintf("%s:%s:%s", rateNew.Provider, rateNew.Base.Code, rateNew.Target.Code)
+				ev := banking.CurrencyRateChange{
+					After: rateNew,
+				}
+				if rateBefore != nil {
+					ev.Before = *rateBefore
+				} else {
+					ev.Before = banking.CurrencyRate{
+						Provider: rateNew.Provider,
+						Base:     rateNew.Base,
+						Target:   rateNew.Target,
+						Rate:     decimal.Zero,
+						Date:     time.Unix(0, 0),
+					}
+				}
+
+				if err := snk.Currency.Write(ctx, k, ev); err != nil {
+					return fmt.Errorf("sink write failed: %s: %w", snkName, err)
+				}
+			}
+
+			ll := s.l.Info().
+				Str("provider", prvName).
+				Str("base", rateNew.Base.Code).
+				Str("target", rateNew.Target.Code).
+				Str("rate", rateNew.Rate.String()).
+				Str("date", rateNew.Date.Format(time.DateTime))
+			if rateBefore != nil {
+				ll = ll.Str("ex_rate", rateBefore.Rate.String()).Str("ex_date", rateBefore.Date.Format(time.DateTime))
+			}
+			ll.Msg("currency rate updated")
 		}
 	}
 
