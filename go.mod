@@ -3,7 +3,7 @@ module github.com/ashep/finstream
 go 1.24
 
 require (
-	github.com/ashep/go-app v0.0.0-20250727064041-43fe1e6f7b60
+	github.com/ashep/go-app v0.0.0-20250809074755-950cc09548b4
 	github.com/ashep/go-banking v0.0.0-20250729194609-2a787091ef3e
 	github.com/ashep/go-monobank-client v0.0.0-20250719094145-b3d6956c6216
 	github.com/aws/aws-sdk-go-v2 v1.37.2
