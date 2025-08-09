@@ -81,20 +81,25 @@ func (s *Streamer) Run(ctx context.Context) error {
 		return errors.New("no providers registered")
 	}
 
+	s.l.Info().
+		Strs("currencies", s.cfg.Currency.List).
+		Msg("streamer started")
+
 	if err := s.fetchCurrencyRates(ctx); err != nil {
-		return err
+		s.l.Error().Err(err).Msg("failed to fetch currency rates")
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
+			s.l.Info().Msg("streamer stopped")
 			if !errors.Is(ctx.Err(), context.Canceled) {
 				return ctx.Err()
 			}
 			return nil
 		case <-time.After(time.Second * time.Duration(s.cfg.Currency.RefreshPeriod)):
 			if err := s.fetchCurrencyRates(ctx); err != nil {
-				return err
+				s.l.Error().Err(err).Msg("failed to fetch currency rates")
 			}
 		}
 	}

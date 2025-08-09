@@ -123,7 +123,7 @@ func (c *Config) ValidateStreaming() error {
 			c.Streaming.Kafka.BootstrapServers = []string{"localhost:9092"}
 		}
 		if c.Streaming.Kafka.Topics.Currency == "" {
-			c.Streaming.Kafka.Topics.Currency = "currency"
+			c.Streaming.Kafka.Topics.Currency = "finstream-currency"
 		}
 	}
 

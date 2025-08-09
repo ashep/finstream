@@ -9,7 +9,6 @@ func main() {
 	r := runner.New(app.New).
 		WithConsoleLogWriter().
 		WithDefaultHTTPLogWriter().
-		WithDefaultHTTPServer().
 		WithDefaultMetricsHandler()
 
 	r.Run()
