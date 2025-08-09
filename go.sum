@@ -2,6 +2,8 @@ github.com/ashep/go-app v0.0.0-20250727064041-43fe1e6f7b60 h1:/CLODdsZ0jpGZVFuXB
 github.com/ashep/go-app v0.0.0-20250727064041-43fe1e6f7b60/go.mod h1:BOxETI4o3fItvvzGiFclEqkDvMRH5pSaJ7XnEuy9hmk=
 github.com/ashep/go-app v0.0.0-20250809074755-950cc09548b4 h1:GT9NjYcCy6uOLB17Q03w5LlbjeNQogsAKm1y68b5f7I=
 github.com/ashep/go-app v0.0.0-20250809074755-950cc09548b4/go.mod h1:BOxETI4o3fItvvzGiFclEqkDvMRH5pSaJ7XnEuy9hmk=
+github.com/ashep/go-app v0.0.0-20250809082159-2765b2f7ba15 h1:dqK350aVmcIcC3dxRrbRz8ubTXp6SCCDzvY6SR3CAdk=
+github.com/ashep/go-app v0.0.0-20250809082159-2765b2f7ba15/go.mod h1:BOxETI4o3fItvvzGiFclEqkDvMRH5pSaJ7XnEuy9hmk=
 github.com/ashep/go-banking v0.0.0-20250729194609-2a787091ef3e h1:8U9ojtO9BRNk9PUbYc96T3hajMrzy17ndL/INrjNQUk=
 github.com/ashep/go-banking v0.0.0-20250729194609-2a787091ef3e/go.mod h1:YyJSqBI5SEwI6f7vlkvIm288M5jWb7KTtWr4OtAy1Bw=
 github.com/ashep/go-monobank-client v0.0.0-20250719094145-b3d6956c6216 h1:CrwGiKdiKgrwyFY1+UoR88GTf9ENMakPyVOzPOlDV3A=
